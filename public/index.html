@@ -1,1 +1,220 @@
-hi
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>SecureHeader Scanner</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0a0d14;--s1:#111520;--s2:#181e2e;--br:#1e2740;--cyan:#00e5ff;--purple:#7b61ff;--green:#00ff88;--red:#ff3b6b;--yellow:#ffd166;--text:#e8eaf6;--mute:#5c6584;--mono:'Space Mono',monospace;--sans:'Syne',sans-serif}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;overflow-x:hidden}
+.grid{position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.03) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+.g1,.g2{position:fixed;border-radius:50%;pointer-events:none;z-index:0;filter:blur(120px);opacity:.12}
+.g1{width:600px;height:600px;background:var(--cyan);top:-200px;left:-150px}
+.g2{width:500px;height:500px;background:var(--purple);bottom:-150px;right:-100px}
+header{position:relative;z-index:10;display:flex;align-items:center;justify-content:space-between;padding:20px 40px;border-bottom:1px solid var(--br);background:rgba(10,13,20,.85);backdrop-filter:blur(10px)}
+.logo{display:flex;align-items:center;gap:10px;font-size:1.15rem;font-weight:600}.logo b{color:var(--cyan)}.logo-icon{font-size:1.4rem;color:var(--cyan)}
+.badge{font-family:var(--mono);font-size:.62rem;color:var(--purple);border:1px solid #7b61ff55;background:#7b61ff11;padding:4px 10px;border-radius:20px}
+main{position:relative;z-index:5;max-width:860px;margin:0 auto;padding:60px 24px 80px}
+.hero{text-align:center;margin-bottom:48px}
+h1{font-size:clamp(2rem,5vw,3.2rem);font-weight:800;line-height:1.1;margin-bottom:14px}
+h1 span{color:var(--cyan)}
+.sub{color:var(--mute);font-size:1rem;max-width:480px;margin:0 auto}
+.scan-box{max-width:680px;margin:0 auto 48px}
+.input-wrap{display:flex;align-items:center;background:var(--s1);border:1px solid var(--br);border-radius:12px;overflow:hidden;transition:border-color .2s,box-shadow .2s}
+.input-wrap:focus-within{border-color:#00e5ff55;box-shadow:0 0 0 3px #00e5ff11}
+.pfx{padding:0 12px 0 18px;font-family:var(--mono);font-size:.82rem;color:var(--mute);white-space:nowrap}
+input{flex:1;padding:16px 0;border:none;outline:none;background:transparent;color:var(--text);font-family:var(--mono);font-size:.88rem}
+input::placeholder{color:#2e3554}
+button{padding:16px 28px;background:var(--cyan);color:#0a0d14;border:none;cursor:pointer;font-family:var(--mono);font-size:.82rem;font-weight:700;letter-spacing:.1em;transition:background .2s,transform .1s}
+button:hover:not(:disabled){background:#00cfe8}
+button:active:not(:disabled){transform:scale(.98)}
+button:disabled{opacity:.4;cursor:not-allowed}
+.spinner{display:inline-block;width:15px;height:15px;border:2px solid #0a0d1460;border-top-color:#0a0d14;border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.err{margin-top:12px;padding:12px 16px;background:#ff3b6b11;border:1px solid #ff3b6b44;border-radius:8px;color:var(--red);font-family:var(--mono);font-size:.78rem}
+.results{animation:fadeIn .4s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.res-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--br);flex-wrap:wrap;gap:8px}
+.res-url{font-family:var(--mono);font-size:.8rem;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.sc{background:var(--s2);padding:2px 8px;border-radius:4px;color:var(--purple);font-size:.72rem}
+.ts{color:var(--mute);font-size:.76rem;font-family:var(--mono)}
+.overview{display:flex;align-items:center;gap:40px;background:var(--s1);border:1px solid var(--br);border-radius:16px;padding:28px 36px;margin-bottom:28px;flex-wrap:wrap}
+.ring-wrap{flex-shrink:0}
+.summ{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;flex:1}
+.si{text-align:center;padding:14px;background:var(--s2);border-radius:10px;border:1px solid var(--br)}
+.sn{font-family:var(--mono);font-size:1.9rem;font-weight:700;line-height:1}
+.sl{font-size:.72rem;color:var(--mute);margin-top:5px}
+.si.g .sn{color:var(--green)}.si.r .sn{color:var(--red)}.si.m .sn{color:var(--mute)}
+.cards{display:flex;flex-direction:column;gap:10px}
+.card{background:var(--s1);border:1px solid var(--br);border-radius:12px;overflow:hidden;animation:slideIn .4s ease both;transition:border-color .2s}
+.card:hover{border-color:#2e3a54}
+@keyframes slideIn{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.ct{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;cursor:pointer;gap:12px;user-select:none}
+.cl{display:flex;align-items:flex-start;gap:12px;flex:1;min-width:0}
+.si-icon{width:32px;height:32px;border-radius:8px;border:1px solid;display:flex;align-items:center;justify-content:center;font-size:.88rem;font-weight:700;flex-shrink:0;font-family:var(--mono)}
+.hn{font-weight:600;font-size:.88rem;font-family:var(--mono);margin-bottom:2px}
+.cr{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.rb{font-family:var(--mono);font-size:.62rem;font-weight:700;padding:3px 8px;border-radius:20px;border:1px solid;letter-spacing:.04em}
+.sb{font-family:var(--mono);font-size:.7rem;font-weight:700}
+.arr{color:var(--mute);font-size:.6rem;transition:transform .2s}
+.cb{border-top:1px solid var(--br);padding:14px 18px;display:flex;flex-direction:column;gap:10px}
+.ir{display:flex;gap:14px;background:var(--s2);border-radius:8px;padding:11px 13px;align-items:flex-start}
+.il{font-family:var(--mono);font-size:.68rem;color:var(--mute);min-width:76px;padding-top:1px}
+.iv{font-family:var(--mono);font-size:.78rem;word-break:break-all;line-height:1.5}
+.ir.rec{border-left:3px solid var(--purple)}
+footer{position:relative;z-index:5;text-align:center;padding:24px;border-top:1px solid var(--br);color:var(--mute);font-size:.72rem;font-family:var(--mono)}
+@media(max-width:600px){header{padding:16px 20px}.overview{flex-direction:column;gap:20px;padding:20px}.cr{flex-direction:column;align-items:flex-end;gap:5px}.res-header{flex-direction:column}}
+</style>
+</head>
+<body>
+<div class="grid"></div><div class="g1"></div><div class="g2"></div>
+
+<header>
+  <div class="logo"><span class="logo-icon">⬡</span>Secure<b>Header</b> Scanner</div>
+  <div class="badge">OWASP Inspired</div>
+</header>
+
+<main>
+  <div class="hero">
+    <h1>HTTP Security<br><span>Header Analyzer</span></h1>
+    <p class="sub">Detect misconfigurations, missing headers, and security risks in any website's HTTP response.</p>
+  </div>
+
+  <div class="scan-box">
+    <div class="input-wrap">
+      <span class="pfx">https://</span>
+      <input id="urlInput" type="text" placeholder="example.com" />
+      <button id="scanBtn" onclick="scan()">SCAN</button>
+    </div>
+    <div id="errMsg" class="err" style="display:none"></div>
+  </div>
+
+  <div id="results" style="display:none" class="results">
+    <div class="res-header">
+      <div class="res-url">
+        <span style="color:var(--mute)">Scanned:</span>
+        <span id="resUrl"></span>
+        <span id="resCode" class="sc"></span>
+      </div>
+      <div id="resTime" class="ts"></div>
+    </div>
+    <div class="overview">
+      <div class="ring-wrap">
+        <svg id="ring" width="130" height="130" viewBox="0 0 140 140">
+          <circle cx="70" cy="70" r="54" fill="none" stroke="#1e2740" stroke-width="10"/>
+          <circle id="ringArc" cx="70" cy="70" r="54" fill="none" stroke-width="10"
+            stroke-dasharray="339.3" stroke-dashoffset="339.3" stroke-linecap="round" transform="rotate(-90 70 70)"
+            style="transition:stroke-dashoffset 1s ease,stroke .5s ease"/>
+          <text id="ringScore" x="70" y="65" text-anchor="middle" font-family="'Space Mono'" font-size="28" font-weight="700" fill="#00ff88"></text>
+          <text x="70" y="85" text-anchor="middle" fill="#5c6584" font-size="10" font-family="'Syne'">SECURITY SCORE</text>
+        </svg>
+      </div>
+      <div class="summ">
+        <div class="si g"><div id="secureN" class="sn">0</div><div class="sl">Secure</div></div>
+        <div class="si r"><div id="missingN" class="sn">0</div><div class="sl">Missing</div></div>
+        <div class="si m"><div id="totalN" class="sn">0</div><div class="sl">Total Checked</div></div>
+        <div class="si" style="border-color:var(--purple)33"><div id="scoreN" class="sn" style="color:var(--purple)">0%</div><div class="sl">Score</div></div>
+      </div>
+    </div>
+    <div id="cards" class="cards"></div>
+  </div>
+</main>
+
+<footer>SecureHeader Scanner • Inspired by OWASP Secure Headers Project</footer>
+
+<script>
+const RISK_C = {HIGH:'#ff3b6b',MEDIUM:'#ffd166',LOW:'#7b61ff',NONE:'#00ff88'};
+const STATUS_I = {secure:'✓',missing:'✗',misconfigured:'⚠'};
+
+document.getElementById('urlInput').addEventListener('keydown', e => { if(e.key==='Enter') scan(); });
+
+async function scan(){
+  const url = document.getElementById('urlInput').value.trim();
+  if(!url) return;
+  const btn = document.getElementById('scanBtn');
+  const err = document.getElementById('errMsg');
+  btn.innerHTML = '<span class="spinner"></span>';
+  btn.disabled = true;
+  err.style.display = 'none';
+  document.getElementById('results').style.display = 'none';
+
+  try {
+    const res = await fetch('/api/scan', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({url})
+    });
+    const data = await res.json();
+    if(!res.ok) throw new Error(data.error || 'Scan failed');
+    renderResults(data);
+  } catch(e) {
+    err.textContent = '⚠ ' + e.message;
+    err.style.display = 'block';
+  } finally {
+    btn.textContent = 'SCAN';
+    btn.disabled = false;
+  }
+}
+
+function renderResults(data){
+  document.getElementById('resUrl').textContent = data.url;
+  document.getElementById('resCode').textContent = 'HTTP ' + data.statusCode;
+  document.getElementById('resTime').textContent = new Date().toLocaleString();
+  document.getElementById('secureN').textContent = data.summary.secure;
+  document.getElementById('missingN').textContent = data.summary.missing;
+  document.getElementById('totalN').textContent = data.summary.total;
+  document.getElementById('scoreN').textContent = data.score + '%';
+
+  const circ = 339.3;
+  const color = data.score>=75?'#00ff88':data.score>=40?'#ffd166':'#ff3b6b';
+  const arc = document.getElementById('ringArc');
+  arc.style.stroke = color;
+  setTimeout(()=>{ arc.style.strokeDashoffset = circ - (data.score/100)*circ; },50);
+  const scoreText = document.getElementById('ringScore');
+  scoreText.textContent = data.score;
+  scoreText.setAttribute('fill', color);
+
+  const cards = document.getElementById('cards');
+  cards.innerHTML = '';
+  data.results.forEach((item, i) => {
+    const sc = item.status==='secure'?'#00ff88':item.status==='missing'?'#ff3b6b':'#ffd166';
+    const rc = RISK_C[item.risk]||'#5c6584';
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.animationDelay = (i*60)+'ms';
+    card.innerHTML = `
+      <div class="ct" onclick="toggle(this)">
+        <div class="cl">
+          <div class="si-icon" style="color:${sc};border-color:${sc}44;background:${sc}11">${STATUS_I[item.status]||'?'}</div>
+          <div>
+            <div class="hn">${item.name}</div>
+            <div style="font-size:.76rem;color:var(--mute)">${item.status==='missing'?'Header not found in response':'Header present in response'}</div>
+          </div>
+        </div>
+        <div class="cr">
+          ${item.risk!=='NONE'?`<span class="rb" style="color:${rc};border-color:${rc}55;background:${rc}11">${item.risk} RISK</span>`:''}
+          <span class="sb" style="color:${sc}">${item.status.toUpperCase()}</span>
+          <span class="arr">▼</span>
+        </div>
+      </div>
+      <div class="cb" style="display:none">
+        ${item.value?`<div class="ir"><span class="il">Value</span><code class="iv">${item.value}</code></div>`:''}
+        ${item.recommendation?`<div class="ir rec"><span class="il">Fix</span><code class="iv">${item.recommendation}</code></div>`:''}
+      </div>`;
+    cards.appendChild(card);
+  });
+
+  document.getElementById('results').style.display = 'block';
+}
+
+function toggle(el){
+  const body = el.nextElementSibling;
+  const arr = el.querySelector('.arr');
+  const open = body.style.display!=='none';
+  body.style.display = open?'none':'flex';
+  arr.style.transform = open?'':'rotate(180deg)';
+}
+</script>
+</body>
+</html>
